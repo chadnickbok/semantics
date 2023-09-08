@@ -1,14 +1,14 @@
 defmodule Semantics do
   @moduledoc """
   Semantic similarity tools using sentence embeddings.
-  
+
   Semantics is an Elixir wrapper around the Python library SentenceTransformers
   by [SBert.net](http://sbert.net)
 
   """
 
   use GenServer
- 
+
   @default_model "paraphrase-MiniLM-L6-v2"
 
   # XXX :code.priv_dir() not available during compilation?
@@ -23,7 +23,7 @@ defmodule Semantics do
     cmd = ["python3", "-m", "venv", @venv_path]
     IO.puts("🚨 SEMANTICS - Configuring venv")
     IO.puts(Enum.join(cmd, " "))
-    
+
     {out_text, err_code} = System.cmd(hd(cmd), tl(cmd))
 
     if err_code != 0 do
@@ -38,6 +38,7 @@ defmodule Semantics do
       IO.puts(Enum.join(cmd, " "))
 
       {out_text, err_code} = System.cmd(hd(cmd), tl(cmd), env: [{"VIRTUAL_ENV", @venv_path}])
+
       if err_code != 0 do
         IO.puts("🚨 SEMANTICS - Error installing requirements. Output:")
         IO.puts(out_text)
@@ -51,10 +52,11 @@ defmodule Semantics do
   def start_link() do
     start_link(@default_model)
   end
+
   def start_link(model) do
     GenServer.start_link(__MODULE__, model, name: Semantics)
   end
-  
+
   @doc """
   Retrieve embedding vector for a given text string with the currently loaded model
 
@@ -83,6 +85,11 @@ defmodule Semantics do
   """
   def embedding(text) do
     {:ok, result} = GenServer.call(Semantics, {:predict, text})
+    result
+  end
+
+  def embedding_base64(text) do
+    {:ok, result} = GenServer.call(Semantics, {:predict_base64, text})
     result
   end
 
@@ -120,24 +127,26 @@ defmodule Semantics do
     GenServer.call(Semantics, {:load, model})
   end
 
-  def similarity(a, b, [type: "cosine"]) do
-    Similarity.cosine(a, b) 
+  def similarity(a, b, type: "cosine") do
+    Similarity.cosine(a, b)
   end
 
   def similarity(a, b) do
-    similarity(a, b, [type: "cosine"])
+    similarity(a, b, type: "cosine")
   end
 
   # Implementation
 
   @impl true
   def init(model) do
-    args = [
-      {:env, [{'VIRTUAL_ENV', to_charlist(@venv_path)}]},
-      {:python, to_charlist(@python_bin)}, 
-      {:python_path, to_charlist(@python_dir)}
-    ]
+    args =
+      [
+        {:env, [{~c"VIRTUAL_ENV", to_charlist(@venv_path)}]},
+        {:python, to_charlist(@python_bin)},
+        {:python_path, to_charlist(@python_dir)}
+      ]
       |> IO.inspect(label: "python start args")
+
     {:ok, pid} = :python.start(args)
 
     :python.call(pid, :app, :load, [model])
@@ -163,4 +172,15 @@ defmodule Semantics do
     {:reply, {:ok, resp}, {model, pid}}
   end
 
+  @impl true
+  def handle_call({:predict_base64, text}, from, {model, pid}) do
+    handle_call({:predict_base64, text, model}, from, {model, pid})
+  end
+
+  @impl true
+  def handle_call({:predict_base64, text, model}, _from, {_, pid}) do
+    # IO.inspect({:predict, text, from, pid}, label: :predict)
+    resp = :python.call(pid, :app, :predict_base64, [model, text])
+    {:reply, {:ok, resp}, {model, pid}}
+  end
 end

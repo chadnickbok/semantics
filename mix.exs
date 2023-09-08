@@ -4,7 +4,7 @@ defmodule Semantics.MixProject do
   def project do
     [
       app: :semantics,
-      version: "0.1.0",
+      version: "0.1.1",
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       deps: deps()
@@ -20,7 +20,7 @@ defmodule Semantics.MixProject do
   defp deps do
     [
       {:similarity, "~> 0.2"},
-      {:erlport, "~> 0.9"},
+      {:erlport, "~> 0.9"}
     ]
   end
 end

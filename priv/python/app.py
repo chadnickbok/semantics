@@ -2,6 +2,7 @@ import json
 import os
 import re
 import time
+from base64 import b64encode
 
 import torch
 from sentence_transformers import SentenceTransformer
@@ -47,4 +48,8 @@ def predict(model_name, text):
     else:
         return predict_one(model, text)
 
-
+def predict_base64(model_name, text):
+    model = load(model_name)
+    text = unpack(text)
+    emb = model.encode(text, show_progress_bar=False)
+    return b64encode(content_embedding).decode('utf-8')
