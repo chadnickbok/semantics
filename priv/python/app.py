@@ -52,4 +52,4 @@ def predict_base64(model_name, text):
     model = load(model_name)
     text = unpack(text)
     emb = model.encode(text, show_progress_bar=False)
-    return b64encode(content_embedding).decode('utf-8')
+    return b64encode(emb).decode('utf-8')
